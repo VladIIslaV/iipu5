@@ -46,8 +46,9 @@ void DeviceManager::getDeviceList()
     for(; strstr(result, "Slot"); i++)
     {
         getField(result, tmp, "Slot", 0, '\n');
-        strcpy(list[i].hw_path, tmp);
         strcat(list[i].full_info, tmp);
+        strcpy(list[i].hw_path, tmp+6);
+        list[i].hw_path[strlen(list[i].hw_path) - 1] = '\0';
 
         getField(result, tmp, "Class", 0, '\n');
         if(strlen(tmp) < 30){
@@ -96,27 +97,94 @@ void DeviceManager::getDriverName()
     for(int i = 0; i < size; i++){
         strcpy(command, "lspci -v -s ");
         strcat(command, list[i].hw_path);
-        command[strlen(command) - 1] = '\0';
-        strcpy(command + 12, command + 18);
         strcat(command, " | grep \'Kernel driver in use\'");
         getCommandLine(command, result);
         if(!strstr(result, "driver")){
             result[0] = '\0';
+            strcat(result, "\t\t\t");
+            strcat(list[i].full_info, result);
         }else{
             result[strlen(result)-1] = '\0';
             strcpy(list[i].driver_name, result + 22);
-            //list[i].driver_name[strlen(list[i].driver_name)] = '\0';
-            cout <<"!@# " <<
-                   list[i].driver_name <<
-                   " !@# " <<
-                   strlen(list[i].driver_name) <<
-                   endl;
             strcat(list[i].full_info, result + 1);
+            strcat(list[i].full_info, "\t");
         }
     }
 
     delete(command);
     delete(result);
+}
+
+void DeviceManager::getDriverPath()
+{
+    char* path = new char[128];
+    char* buffer = new char[256];
+    char* tmp = new char[256];
+    char* command = new char[256];
+    tmp[0] = '\0';
+
+    for(int i = 0; i < size; i++){
+        strcpy(path, "/sys/bus/pci/devices/0000:");
+        strcat(path, list[i].hw_path);
+        strcat(path, "/modalias\0");
+        cout << path << endl;
+
+        ifstream file(path);
+
+        file >> buffer;
+        strcpy(command, "/sbin/modinfo ");
+        strcat(command, buffer);
+        strcat(command, " | grep filename");
+        getCommandLine(command, buffer);
+
+        if(strlen(buffer)){
+            getField(buffer, tmp, "filename", 16, ' ');
+            *(strstr(buffer, ".ko")+3) = '\0';
+            strcpy(list[i].file_path, buffer);
+            strcat(list[i].full_info, buffer);
+            cout << buffer << endl;
+        }
+        buffer[0] = '\0';
+        file.close();
+    }
+
+    delete(tmp);
+    delete(command);
+    delete(buffer);
+    delete(path);
+}
+
+void DeviceManager::offDevice(int row)
+{
+    char* path = new char[256];
+    path[0] = '\0';
+
+    strcpy(path, "cd /sys/bus/pci/drivers/");
+    strcat(path, list[row].driver_name + 1);
+    strcat(path, ";echo 0000:");
+    strcat(path, list[row].hw_path);
+    strcat(path, " | sudo tee -a unbind\0");
+    cout << path << endl;
+    system(path);
+
+    delete(path);
+}
+
+void DeviceManager::onDevice(int row)
+{
+    char* path = new char[256];
+    path[0] = '\0';
+
+    path[0] = '\0';
+    strcpy(path, "cd /sys/bus/pci/drivers/");
+    strcat(path, list[row].driver_name + 1);
+    strcat(path, ";echo 0000:");
+    strcat(path, list[row].hw_path);
+    strcat(path, " | sudo tee -a bind\0");
+    cout << path << endl;
+    system(path);
+
+    delete(path);
 }
 
 Device *DeviceManager::getList() const

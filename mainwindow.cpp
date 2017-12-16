@@ -6,38 +6,52 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent)
     list = new QListWidget(this);
 
     btn = new QPushButton(this);
-    btn->setText("Action");
+    btn->setText("Release");
     connect(btn, SIGNAL(clicked()), this, SLOT(showList()));
 
+    btn1 = new QPushButton(this);
+    btn1->setText("Off");
+    connect(btn1, SIGNAL(clicked()), this, SLOT(offDevice()));
+
+    btn2 = new QPushButton(this);
+    btn2->setText("On");
+    connect(btn2, SIGNAL(clicked()), this, SLOT(onDevice()));
+
     grid = new QGridLayout(this);
-    grid->addWidget(list, 0, 0);
+    grid->addWidget(list, 0, 0, 1, 3);
     grid->addWidget(btn, 1, 0);
+    grid->addWidget(btn1, 1, 1);
+    grid->addWidget(btn2, 1, 2);
 }
 
 void MainWindow::showList()
 {
-    DeviceManager device;
-
     device.getDeviceList();
-    //device.getVendorList();
+    device.getDriverPath();
 
     if(list->count())
         list->clear();
 
     for(int i = 0; i < device.getSize(); i++)
     {
-        cout << device.getList()[i].hw_path << endl;
         list->addItem(QString(device.getList()[i].full_info));
     }
 }
 
-void MainWindow::disconnectDevice()
+void MainWindow::onDevice()
 {
-
+    if(list->count()){
+        device.onDevice(list->currentRow());
+        cout << "### " << list->currentRow() << endl;
+    }
 }
 
-void MainWindow::connectDevice()
+void MainWindow::offDevice()
 {
-
+    if(list->count()){
+        device.offDevice(list->currentRow());
+        cout << "### " << list->currentRow() << endl;
+    }
 }
+
 

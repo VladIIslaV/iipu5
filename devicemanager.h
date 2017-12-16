@@ -22,6 +22,9 @@ public:
     ~DeviceManager();
     void getDeviceList();
     void getDriverName();  //vendor + sub_vendor
+    void getDriverPath();
+    void offDevice(int row);
+    void onDevice(int row);
 
     Device *getList() const;
     int getSize() const;
